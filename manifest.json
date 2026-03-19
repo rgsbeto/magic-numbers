@@ -1,6 +1,6 @@
 {
-  "name": "Mates Primer Grado",
-  "short_name": "Mates 1°",
+  "name": "Magic Numbers",
+  "short_name": "Magic Numbers",
   "description": "Práctica interactiva de matemáticas para primer grado",
   "start_url": "./index.html",
   "display": "standalone",

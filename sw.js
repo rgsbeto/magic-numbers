@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mates-1grado-v1';
+const CACHE_NAME = 'magic-numbers-v1';
 const ASSETS = [
   './',
   './index.html',
