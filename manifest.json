@@ -1,0 +1,24 @@
+{
+  "name": "Mates Primer Grado",
+  "short_name": "Mates 1°",
+  "description": "Práctica interactiva de matemáticas para primer grado",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#FFFBF0",
+  "theme_color": "#6C3CE1",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

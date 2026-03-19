@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#6C3CE1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="Práctica interactiva de matemáticas para primer grado">
+  <title>Mates Primer Grado</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body, #root { min-height: 100vh; min-height: 100dvh; }
+    body { font-family: 'Fredoka', sans-serif; background: #FFFBF0; overscroll-behavior: none; }
+    button:active { transform: scale(0.96) !important; }
+    @keyframes confFall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+    @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+    @keyframes popIn { from { transform: scale(0.5); opacity: 0 } to { transform: scale(1); opacity: 1 } }
+    @keyframes slideUp { from { transform: translateY(30px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    /* ═══ COLORS ═══ */
+    const C = {
+      bg:"#FFFBF0",pri:"#6C3CE1",sec:"#FF6B9D",acc:"#00C9A7",
+      ora:"#FF8C42",blu:"#4ECDC4",yel:"#FFE66D",red:"#FF6B6B",
+      grn:"#51CF66",dark:"#2D3047",wht:"#FFFFFF",lit:"#FFF3E4",
+      pink:"#FFD6E8",lav:"#E8DAFE",mint:"#D1FAE5",sky:"#DBEAFE",
+    };
+    const FONT = "'Fredoka', sans-serif";
+
+    /* ═══ DATA ═══ */
+    const DECOMP_NUMS = [2,3,4,5,6,7,8,9,10];
+    const COMP_PAIRS = [[1,3],[4,5],[8,1],[2,5],[6,1],[7,2]];
+    const COMPARE_DATA = [[74,64],[65,73],[98,24],[100,99],[45,18],[70,60],[23,14],[76,95],[86,48],[57,75],[95,15],[35,35]];
+    const HEART_ROWS = [13,10,11,14,9,12,14,11,10,13];
+    const BLOCK_DATA = [{d:5,u:4},{d:6,u:1},{d:4,u:5},{d:8,u:7},{d:2,u:8},{d:5,u:3},{d:2,u:9},{d:7,u:6},{d:3,u:6},{d:9,u:3},{d:0,u:6},{d:10,u:0}];
+    const MAYOR_DATA = [[74,98,64,73],[65,24,99,45],[100,18,60,14],[70,23,48,95],[76,86,57,75],[95,57,15,35],[28,13,35,2],[78,95,64,10]];
+    const MENOR_DATA = [[47,89,46,37],[56,42,29,54],[10,81,60,41],[70,32,84,59],[67,68,75,57],[59,75,51,53],[82,31,53,7],[87,59,46,100]];
+
+    /* ═══ SHARED COMPONENTS ═══ */
+    function Confetti({show}){
+      if(!show) return null;
+      return React.createElement('div',{style:{position:"fixed",inset:0,pointerEvents:"none",zIndex:999}},
+        Array.from({length:35},(_,i)=>
+          React.createElement('div',{key:i,style:{
+            position:"absolute",left:`${Math.random()*100}%`,top:"-20px",
+            width:6+Math.random()*10,height:6+Math.random()*10,
+            borderRadius:Math.random()>0.5?"50%":"2px",
+            background:[C.sec,C.acc,C.yel,C.ora,C.blu,C.grn][i%6],
+            animation:`confFall 1.8s ${Math.random()*0.6}s ease-in forwards`
+          }})
+        )
+      );
+    }
+
+    function CelebrationModal({show,onClose}){
+      if(!show) return null;
+      return (
+        <div style={{position:"fixed",inset:0,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.4)",zIndex:200}} onClick={onClose}>
+          <div onClick={e=>e.stopPropagation()} style={{background:C.wht,borderRadius:32,padding:"36px 44px",textAlign:"center",boxShadow:"0 20px 80px rgba(0,0,0,0.2)",animation:"popIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275)"}}>
+            <div style={{fontSize:60,marginBottom:8}}>🎉</div>
+            <div style={{fontFamily:FONT,fontSize:30,fontWeight:700,color:C.pri}}>¡Excelente!</div>
+            <div style={{fontFamily:FONT,fontSize:16,color:C.dark+"99",marginTop:4}}>¡Todo correcto! ¡Eres increíble!</div>
+            <button onClick={onClose} style={{marginTop:18,padding:"12px 32px",borderRadius:16,border:"none",background:`linear-gradient(135deg,${C.acc},${C.blu})`,fontFamily:FONT,fontSize:16,fontWeight:600,color:C.wht,cursor:"pointer"}}>Continuar ✨</button>
+          </div>
+        </div>
+      );
+    }
+
+    function NumberPad({onSelect,onClose,max=10}){
+      const nums = Array.from({length:max+1},(_,i)=>i);
+      return (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100}} onClick={onClose}>
+          <div onClick={e=>e.stopPropagation()} style={{background:C.wht,borderRadius:28,padding:"24px 20px",boxShadow:"0 20px 60px rgba(0,0,0,0.25)",display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,maxWidth:340,width:"90%"}}>
+            <div style={{gridColumn:"1/-1",textAlign:"center",fontFamily:FONT,fontSize:20,fontWeight:600,color:C.pri,marginBottom:4}}>Elige un número</div>
+            {nums.map(n=>
+              <button key={n} onClick={()=>onSelect(n)} style={{height:62,borderRadius:16,border:`3px solid ${C.pri}22`,background:C.lit,fontSize:26,fontWeight:700,fontFamily:FONT,color:C.dark,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gridColumn:max>9&&n===max?"2/4":"auto"}}>{n}</button>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function InputBox({value,onClick,correct,wrong,size=60}){
+      const bc=correct?C.grn:wrong?C.red:C.pri+"55";
+      const bg=correct?C.grn+"18":wrong?C.red+"18":C.wht;
+      return <button onClick={onClick} style={{width:size,height:size,borderRadius:14,border:`3px solid ${bc}`,background:bg,fontSize:24,fontWeight:700,fontFamily:FONT,color:C.dark,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:correct?`0 0 14px ${C.grn}44`:wrong?`0 0 14px ${C.red}44`:"0 3px 10px rgba(0,0,0,0.06)",transition:"all 0.2s"}}>{value!==null&&value!==undefined?value:""}</button>;
+    }
+
+    function Dots({count,size=10,color=C.red}){
+      const cols=count<=3?count:count<=6?3:count<=8?4:5;
+      return (
+        <div style={{display:"inline-grid",gridTemplateColumns:`repeat(${cols},${size}px)`,gap:2,justifyContent:"center"}}>
+          {Array.from({length:count},(_,i)=><div key={i} style={{width:size,height:size,borderRadius:"50%",background:color}}/>)}
+        </div>
+      );
+    }
+
+    function Header({title,subtitle,onBack,color1=C.pri,color2=C.sec}){
+      return (
+        <div style={{background:`linear-gradient(135deg,${color1},${color2})`,padding:"20px 16px 16px",borderRadius:"0 0 28px 28px",boxShadow:`0 8px 30px ${color1}33`,textAlign:"center",position:"sticky",top:0,zIndex:50}}>
+          {onBack && <button onClick={onBack} style={{position:"absolute",left:12,top:16,background:"rgba(255,255,255,0.2)",border:"none",borderRadius:14,width:44,height:44,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:22,color:C.wht}}>←</button>}
+          <h1 style={{fontSize:22,fontWeight:700,color:C.wht,margin:0,fontFamily:FONT}}>{title}</h1>
+          {subtitle && <p style={{color:"#ffffffbb",fontSize:13,marginTop:3,fontFamily:FONT,fontWeight:500}}>{subtitle}</p>}
+        </div>
+      );
+    }
+
+    function BottomBar({onCheck,onReset,checkLabel="✅ Revisar",resetLabel="🔄 Borrar"}){
+      return (
+        <div style={{position:"fixed",bottom:0,left:0,right:0,padding:"12px 16px",background:"rgba(255,251,240,0.95)",backdropFilter:"blur(12px)",borderTop:"1px solid rgba(0,0,0,0.06)",display:"flex",gap:10,zIndex:50}}>
+          <button onClick={onReset} style={{flex:1,padding:"14px 10px",borderRadius:16,border:`2px solid ${C.pri}33`,background:C.wht,fontFamily:FONT,fontSize:16,fontWeight:600,color:C.pri,cursor:"pointer"}}>{resetLabel}</button>
+          <button onClick={onCheck} style={{flex:2,padding:"14px 10px",borderRadius:16,border:"none",background:`linear-gradient(135deg,${C.acc},${C.blu})`,fontFamily:FONT,fontSize:16,fontWeight:700,color:C.wht,cursor:"pointer",boxShadow:`0 6px 20px ${C.acc}44`}}>{checkLabel}</button>
+        </div>
+      );
+    }
+
+    function ScoreBadge({score,total}){
+      return <div style={{textAlign:"center",margin:"14px 0",fontFamily:FONT,fontSize:18,fontWeight:600,color:C.pri,animation:"fadeIn 0.4s ease"}}>{score} de {total} correctas {score===total?"🏆":""}</div>;
+    }
+
+    /* ═══ 1. DESCOMPOSICIÓN Y COMPOSICIÓN ═══ */
+    function DecompCard({number,answers,setAnswers,checked}){
+      const [padT,setPadT]=useState(null);
+      const a=answers[0],b=answers[1];
+      const ok=checked&&a!==null&&b!==null&&a+b===number;
+      const bad=checked&&a!==null&&b!==null&&a+b!==number;
+      return (
+        <div style={{background:C.wht,borderRadius:20,padding:"16px 12px",display:"flex",flexDirection:"column",alignItems:"center",gap:8,boxShadow:"0 4px 16px rgba(0,0,0,0.05)",border:`2px solid ${ok?C.grn:bad?C.red+"66":C.pri+"12"}`}}>
+          <div style={{width:60,height:60,borderRadius:16,background:`linear-gradient(135deg,${C.pri},${C.sec})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,fontWeight:700,fontFamily:FONT,color:C.wht,boxShadow:`0 4px 16px ${C.pri}44`}}>{number}</div>
+          <Dots count={number} size={8} color={C.sec}/>
+          <svg width="100" height="28" viewBox="0 0 100 28"><line x1="50" y1="0" x2="20" y2="28" stroke={C.acc} strokeWidth="2.5" strokeLinecap="round"/><line x1="50" y1="0" x2="80" y2="28" stroke={C.acc} strokeWidth="2.5" strokeLinecap="round"/></svg>
+          <div style={{display:"flex",gap:16}}>
+            <InputBox value={a} onClick={()=>setPadT(0)} correct={ok} wrong={bad} size={50}/>
+            <InputBox value={b} onClick={()=>setPadT(1)} correct={ok} wrong={bad} size={50}/>
+          </div>
+          {ok&&<div style={{fontSize:20}}>⭐</div>}
+          {padT!==null&&<NumberPad max={10} onSelect={n=>{const x=[...answers];x[padT]=n;setAnswers(x);setPadT(null);}} onClose={()=>setPadT(null)}/>}
+        </div>
+      );
+    }
+
+    function CompCard({a,b,answer,setAnswer,checked}){
+      const [pad,setPad]=useState(false);
+      const target=a+b;
+      const ok=checked&&answer===target;
+      const bad=checked&&answer!==null&&answer!==target;
+      return (
+        <div style={{background:C.wht,borderRadius:20,padding:"14px 10px",display:"flex",flexDirection:"column",alignItems:"center",gap:6,boxShadow:"0 4px 16px rgba(0,0,0,0.05)",border:`2px solid ${ok?C.grn:bad?C.red+"66":C.acc+"15"}`}}>
+          <div style={{display:"flex",gap:12,alignItems:"center"}}>
+            <div style={{background:C.lit,borderRadius:12,padding:"6px 8px",display:"flex",flexDirection:"column",alignItems:"center",gap:3,border:`2px solid ${C.ora}33`}}>
+              <Dots count={a} size={7} color={C.red}/>
+              <span style={{fontFamily:FONT,fontSize:20,fontWeight:700,color:C.dark}}>{a}</span>
+            </div>
+            <span style={{fontFamily:FONT,fontSize:24,fontWeight:700,color:C.acc}}>+</span>
+            <div style={{background:C.lit,borderRadius:12,padding:"6px 8px",display:"flex",flexDirection:"column",alignItems:"center",gap:3,border:`2px solid ${C.ora}33`}}>
+              <Dots count={b} size={7} color={C.red}/>
+              <span style={{fontFamily:FONT,fontSize:20,fontWeight:700,color:C.dark}}>{b}</span>
+            </div>
+          </div>
+          <div style={{fontFamily:FONT,fontSize:20,color:C.acc}}>↓</div>
+          <InputBox value={answer} onClick={()=>setPad(true)} correct={ok} wrong={bad} size={56}/>
+          {ok&&<div style={{fontSize:20}}>⭐</div>}
+          {pad&&<NumberPad max={10} onSelect={n=>{setAnswer(n);setPad(false);}} onClose={()=>setPad(false)}/>}
+        </div>
+      );
+    }
+
+    function Descomposicion({onBack}){
+      const [tab,setTab]=useState("decomp");
+      const [dAns,setDAns]=useState(DECOMP_NUMS.map(()=>[null,null]));
+      const [cAns,setCAns]=useState(COMP_PAIRS.map(()=>null));
+      const [checked,setChecked]=useState(false);
+      const [confetti,setConfetti]=useState(false);
+      const [celeb,setCeleb]=useState(false);
+      const handleCheck=()=>{setChecked(true);const ok=tab==="decomp"?dAns.every((a,i)=>a[0]!==null&&a[1]!==null&&a[0]+a[1]===DECOMP_NUMS[i]):cAns.every((a,i)=>a===COMP_PAIRS[i][0]+COMP_PAIRS[i][1]);if(ok){setConfetti(true);setCeleb(true);setTimeout(()=>setConfetti(false),2500);}};
+      const handleReset=()=>{setChecked(false);if(tab==="decomp")setDAns(DECOMP_NUMS.map(()=>[null,null]));else setCAns(COMP_PAIRS.map(()=>null));};
+      const dScore=dAns.filter((a,i)=>a[0]!==null&&a[1]!==null&&a[0]+a[1]===DECOMP_NUMS[i]).length;
+      const cScore=cAns.filter((a,i)=>a===COMP_PAIRS[i][0]+COMP_PAIRS[i][1]).length;
+      return (
+        <div style={{minHeight:"100vh",background:`linear-gradient(170deg,${C.bg},${C.lav},${C.mint})`}}>
+          <Confetti show={confetti}/><CelebrationModal show={celeb} onClose={()=>setCeleb(false)}/>
+          <Header title="✂️ Descomponer y Componer" subtitle="Práctica con números del 1 al 10" onBack={onBack}/>
+          <div style={{padding:"12px 12px 0",display:"flex",gap:6,justifyContent:"center"}}>
+            {[{k:"decomp",l:"✂️ Descomponer"},{k:"comp",l:"🧩 Componer"}].map(t=>
+              <button key={t.k} onClick={()=>{setTab(t.k);setChecked(false);}} style={{flex:1,padding:"10px 8px",borderRadius:14,border:"none",maxWidth:200,background:tab===t.k?C.pri:C.wht,color:tab===t.k?C.wht:C.pri,fontFamily:FONT,fontSize:15,fontWeight:600,cursor:"pointer",boxShadow:tab===t.k?`0 4px 12px ${C.pri}44`:"0 2px 6px rgba(0,0,0,0.06)"}}>{t.l}</button>
+            )}
+          </div>
+          <div style={{padding:"12px 10px 120px"}}>
+            <div style={{background:C.wht+"cc",borderRadius:16,padding:"10px 14px",marginBottom:14,border:`2px dashed ${C.pri}33`,textAlign:"center"}}>
+              <p style={{fontFamily:FONT,fontSize:15,fontWeight:600,color:C.dark}}>{tab==="decomp"?"Escribe dos números que sumen el número morado 💜":"Suma los dos números y escribe el resultado ✨"}</p>
+            </div>
+            {tab==="decomp"?(
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:12}}>
+                {DECOMP_NUMS.map((num,i)=><DecompCard key={num} number={num} answers={dAns[i]} setAnswers={a=>{const n=[...dAns];n[i]=a;setDAns(n);if(checked)setChecked(false);}} checked={checked}/>)}
+              </div>
+            ):(
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:12}}>
+                {COMP_PAIRS.map(([a,b],i)=><CompCard key={i} a={a} b={b} answer={cAns[i]} setAnswer={v=>{const n=[...cAns];n[i]=v;setCAns(n);if(checked)setChecked(false);}} checked={checked}/>)}
+              </div>
+            )}
+            {checked&&<ScoreBadge score={tab==="decomp"?dScore:cScore} total={tab==="decomp"?DECOMP_NUMS.length:COMP_PAIRS.length}/>}
+          </div>
+          <BottomBar onCheck={handleCheck} onReset={handleReset}/>
+        </div>
+      );
+    }
+
+    /* ═══ 2. COMPARACIÓN ═══ */
+    function Comparacion({onBack}){
+      const [answers,setAnswers]=useState(COMPARE_DATA.map(()=>null));
+      const [checked,setChecked]=useState(false);
+      const [confetti,setConfetti]=useState(false);
+      const [celeb,setCeleb]=useState(false);
+      const getCorrect=([a,b])=>a>b?">":a<b?"<":"=";
+      const handleCheck=()=>{setChecked(true);if(answers.every((a,i)=>a===getCorrect(COMPARE_DATA[i]))){setConfetti(true);setCeleb(true);setTimeout(()=>setConfetti(false),2500);}};
+      const score=answers.filter((a,i)=>a===getCorrect(COMPARE_DATA[i])).length;
+      return (
+        <div style={{minHeight:"100vh",background:`linear-gradient(170deg,${C.bg},${C.sky},${C.mint})`}}>
+          <Confetti show={confetti}/><CelebrationModal show={celeb} onClose={()=>setCeleb(false)}/>
+          <Header title="⚖️ Comparemos Cantidades" subtitle="Mayor, menor o igual" onBack={onBack} color1="#3B82F6" color2={C.acc}/>
+          <div style={{padding:"14px 12px 120px"}}>
+            <div style={{background:C.wht+"cc",borderRadius:16,padding:"10px 14px",marginBottom:14,border:"2px dashed #3B82F644",textAlign:"center"}}>
+              <p style={{fontFamily:FONT,fontSize:15,fontWeight:600,color:C.dark}}>{"Toca el símbolo correcto: mayor (>), igual (=) o menor (<)"}</p>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {COMPARE_DATA.map(([a,b],i)=>{
+                const correct=getCorrect([a,b]),picked=answers[i];
+                const ok=checked&&picked===correct,bad=checked&&picked!==null&&picked!==correct;
+                return (
+                  <div key={i} style={{background:C.wht,borderRadius:18,padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"center",gap:10,boxShadow:"0 3px 12px rgba(0,0,0,0.05)",border:`2px solid ${ok?C.grn:bad?C.red+"66":"transparent"}`}}>
+                    <span style={{fontFamily:FONT,fontSize:28,fontWeight:700,color:C.dark,minWidth:52,textAlign:"right"}}>{a}</span>
+                    <div style={{display:"flex",gap:6}}>
+                      {[">","=","<"].map(sym=>{
+                        const sel=picked===sym,symOk=checked&&sym===correct;
+                        return <button key={sym} onClick={()=>{const n=[...answers];n[i]=sym;setAnswers(n);if(checked)setChecked(false);}} style={{width:52,height:52,borderRadius:14,border:`3px solid ${symOk&&checked?C.grn:sel?C.pri:C.pri+"22"}`,background:symOk&&checked?C.grn+"22":sel?C.pri+"18":C.lit,fontFamily:FONT,fontSize:24,fontWeight:700,color:symOk&&checked?C.grn:sel?C.pri:C.dark+"88",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s"}}>{sym}</button>;
+                      })}
+                    </div>
+                    <span style={{fontFamily:FONT,fontSize:28,fontWeight:700,color:C.dark,minWidth:52}}>{b}</span>
+                    {ok&&<span style={{fontSize:18}}>⭐</span>}
+                  </div>
+                );
+              })}
+            </div>
+            {checked&&<ScoreBadge score={score} total={COMPARE_DATA.length}/>}
+          </div>
+          <BottomBar onCheck={handleCheck} onReset={()=>{setChecked(false);setAnswers(COMPARE_DATA.map(()=>null));}}/>
+        </div>
+      );
+    }
+
+    /* ═══ 3. DECENAS ═══ */
+    function Decenas({onBack}){
+      const [selected,setSelected]=useState(HEART_ROWS.map(n=>Array(n).fill(false)));
+      const [checked,setChecked]=useState(false);
+      const [confetti,setConfetti]=useState(false);
+      const [celeb,setCeleb]=useState(false);
+      const toggleHeart=(row,col)=>{if(checked)setChecked(false);const n=selected.map(r=>[...r]);n[row][col]=!n[row][col];setSelected(n);};
+      const handleCheck=()=>{setChecked(true);const allOk=selected.every((row,i)=>{const count=row.filter(Boolean).length;return HEART_ROWS[i]>=10?count===10:count===HEART_ROWS[i];});if(allOk){setConfetti(true);setCeleb(true);setTimeout(()=>setConfetti(false),2500);}};
+      const getRowStatus=(row,i)=>{if(!checked)return null;const count=row.filter(Boolean).length;const target=HEART_ROWS[i]>=10?10:HEART_ROWS[i];return count===target;};
+      return (
+        <div style={{minHeight:"100vh",background:`linear-gradient(170deg,${C.bg},${C.pink},${C.lit})`}}>
+          <Confetti show={confetti}/><CelebrationModal show={celeb} onClose={()=>setCeleb(false)}/>
+          <Header title="❤️ Encerramos Decenas" subtitle="Toca exactamente 10 corazones por fila" onBack={onBack} color1="#E11D48" color2={C.ora}/>
+          <div style={{padding:"14px 10px 120px"}}>
+            <div style={{background:C.wht+"cc",borderRadius:16,padding:"10px 14px",marginBottom:14,border:"2px dashed #E11D4844",textAlign:"center"}}>
+              <p style={{fontFamily:FONT,fontSize:15,fontWeight:600,color:C.dark}}>Toca 10 corazones en cada fila para encerrar una decena 💕</p>
+              <p style={{fontFamily:FONT,fontSize:12,fontWeight:500,color:C.dark+"88",marginTop:2}}>Si la fila tiene menos de 10, selecciona todos</p>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              {HEART_ROWS.map((count,ri)=>{
+                const status=getRowStatus(selected[ri],ri);
+                const selCount=selected[ri].filter(Boolean).length;
+                return (
+                  <div key={ri} style={{background:C.wht,borderRadius:18,padding:"12px 10px",boxShadow:"0 3px 12px rgba(0,0,0,0.05)",border:`2px solid ${status===true?C.grn:status===false?C.red+"66":"transparent"}`}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+                      <span style={{fontFamily:FONT,fontSize:13,fontWeight:600,color:C.dark+"88"}}>Fila {ri+1} ({count} corazones)</span>
+                      <span style={{fontFamily:FONT,fontSize:13,fontWeight:700,color:selCount===10?C.grn:selCount>10?C.red:C.dark+"66"}}>{selCount}/10 {status===true?"⭐":""}</span>
+                    </div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:4,justifyContent:"center"}}>
+                      {Array.from({length:count},(_,ci)=>
+                        <button key={ci} onClick={()=>toggleHeart(ri,ci)} style={{width:36,height:36,borderRadius:10,border:"none",background:selected[ri][ci]?"#FFE0EB":"transparent",outline:selected[ri][ci]?"3px solid #E11D48":"none",cursor:"pointer",fontSize:22,display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s",transform:selected[ri][ci]?"scale(1.1)":"scale(1)"}}>❤️</button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {checked&&<ScoreBadge score={selected.filter((r,i)=>getRowStatus(r,i)===true).length} total={HEART_ROWS.length}/>}
+          </div>
+          <BottomBar onCheck={handleCheck} onReset={()=>{setChecked(false);setSelected(HEART_ROWS.map(n=>Array(n).fill(false)));}}/>
+        </div>
+      );
+    }
+
+    /* ═══ 4. NÚMERO REPRESENTADO ═══ */
+    function BlockVis({d,u}){
+      return (
+        <div style={{display:"flex",gap:6,alignItems:"flex-end",justifyContent:"center",flexWrap:"wrap",minHeight:60}}>
+          {Array.from({length:d},(_,i)=><div key={`d${i}`} style={{width:14,height:56,borderRadius:4,background:"linear-gradient(180deg,#F472B6,#EC4899)",border:"1px solid #DB277788",boxShadow:"1px 1px 3px rgba(0,0,0,0.15)"}}/>)}
+          {d>0&&u>0&&<div style={{width:4}}/>}
+          <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(u||1,3)},1fr)`,gap:2}}>
+            {Array.from({length:u},(_,i)=><div key={`u${i}`} style={{width:14,height:14,borderRadius:3,background:"linear-gradient(135deg,#67E8F9,#22D3EE)",border:"1px solid #06B6D488",boxShadow:"1px 1px 2px rgba(0,0,0,0.1)"}}/>)}
+          </div>
+        </div>
+      );
+    }
+
+    function NumeroRepresentado({onBack}){
+      const [answers,setAnswers]=useState(BLOCK_DATA.map(()=>({d:null,u:null})));
+      const [checked,setChecked]=useState(false);
+      const [padInfo,setPadInfo]=useState(null);
+      const [confetti,setConfetti]=useState(false);
+      const [celeb,setCeleb]=useState(false);
+      const handleCheck=()=>{setChecked(true);const ok=answers.every((a,i)=>a.d===BLOCK_DATA[i].d&&a.u===BLOCK_DATA[i].u);if(ok){setConfetti(true);setCeleb(true);setTimeout(()=>setConfetti(false),2500);}};
+      const score=answers.filter((a,i)=>a.d===BLOCK_DATA[i].d&&a.u===BLOCK_DATA[i].u).length;
+      return (
+        <div style={{minHeight:"100vh",background:`linear-gradient(170deg,${C.bg},${C.mint},${C.lav})`}}>
+          <Confetti show={confetti}/><CelebrationModal show={celeb} onClose={()=>setCeleb(false)}/>
+          <Header title="🧱 Número Representado" subtitle="Cuenta las barras y cubos" onBack={onBack} color1="#8B5CF6" color2="#EC4899"/>
+          <div style={{padding:"14px 10px 120px"}}>
+            <div style={{background:C.wht+"cc",borderRadius:16,padding:"10px 14px",marginBottom:14,border:"2px dashed #8B5CF644",textAlign:"center"}}>
+              <p style={{fontFamily:FONT,fontSize:15,fontWeight:600,color:C.dark}}>Cuenta las barras (decenas) y cubos (unidades) 🧮</p>
+              <div style={{display:"flex",gap:16,justifyContent:"center",marginTop:6}}>
+                <span style={{display:"flex",alignItems:"center",gap:4,fontFamily:FONT,fontSize:12,color:C.dark+"88"}}><div style={{width:10,height:32,borderRadius:2,background:"#EC4899"}}/> = 10</span>
+                <span style={{display:"flex",alignItems:"center",gap:4,fontFamily:FONT,fontSize:12,color:C.dark+"88"}}><div style={{width:12,height:12,borderRadius:2,background:"#22D3EE"}}/> = 1</span>
+              </div>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12}}>
+              {BLOCK_DATA.map(({d,u},i)=>{
+                const a=answers[i];
+                const ok=checked&&a.d===d&&a.u===u;
+                const bad=checked&&(a.d!==null||a.u!==null)&&(a.d!==d||a.u!==u);
+                return (
+                  <div key={i} style={{background:C.wht,borderRadius:20,padding:"14px 10px",display:"flex",flexDirection:"column",alignItems:"center",gap:8,boxShadow:"0 4px 16px rgba(0,0,0,0.05)",border:`2px solid ${ok?C.grn:bad?C.red+"66":"transparent"}`}}>
+                    <BlockVis d={d} u={u}/>
+                    <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                      <div style={{textAlign:"center"}}><div style={{fontFamily:FONT,fontSize:11,fontWeight:600,color:"#EC4899"}}>D</div><InputBox value={a.d} size={46} onClick={()=>setPadInfo({idx:i,field:"d"})} correct={checked&&a.d===d} wrong={checked&&a.d!==null&&a.d!==d}/></div>
+                      <div style={{textAlign:"center"}}><div style={{fontFamily:FONT,fontSize:11,fontWeight:600,color:"#22D3EE"}}>U</div><InputBox value={a.u} size={46} onClick={()=>setPadInfo({idx:i,field:"u"})} correct={checked&&a.u===u} wrong={checked&&a.u!==null&&a.u!==u}/></div>
+                    </div>
+                    {ok&&<span style={{fontSize:18}}>⭐</span>}
+                  </div>
+                );
+              })}
+            </div>
+            {checked&&<ScoreBadge score={score} total={BLOCK_DATA.length}/>}
+          </div>
+          {padInfo&&<NumberPad max={10} onSelect={n=>{const na=[...answers];na[padInfo.idx]={...na[padInfo.idx],[padInfo.field]:n};setAnswers(na);setPadInfo(null);if(checked)setChecked(false);}} onClose={()=>setPadInfo(null)}/>}
+          <BottomBar onCheck={handleCheck} onReset={()=>{setChecked(false);setAnswers(BLOCK_DATA.map(()=>({d:null,u:null})));}}/>
+        </div>
+      );
+    }
+
+    /* ═══ 5 & 6. MAYOR / MENOR ═══ */
+    function MayorMenor({onBack,mode}){
+      const data=mode==="mayor"?MAYOR_DATA:MENOR_DATA;
+      const [answers,setAnswers]=useState(data.map(()=>null));
+      const [checked,setChecked]=useState(false);
+      const [confetti,setConfetti]=useState(false);
+      const [celeb,setCeleb]=useState(false);
+      const getCorrect=(row)=>mode==="mayor"?Math.max(...row):Math.min(...row);
+      const handleCheck=()=>{setChecked(true);if(answers.every((a,i)=>a===getCorrect(data[i]))){setConfetti(true);setCeleb(true);setTimeout(()=>setConfetti(false),2500);}};
+      const score=answers.filter((a,i)=>a===getCorrect(data[i])).length;
+      const isMayor=mode==="mayor";
+      return (
+        <div style={{minHeight:"100vh",background:`linear-gradient(170deg,${C.bg},${isMayor?C.lav:C.sky},${isMayor?C.pink:C.mint})`}}>
+          <Confetti show={confetti}/><CelebrationModal show={celeb} onClose={()=>setCeleb(false)}/>
+          <Header title={isMayor?"👑 ¿Cuál es el Mayor?":"🔍 ¿Cuál es el Menor?"} subtitle={isMayor?"Encuentra el número más grande":"Encuentra el número más pequeño"} onBack={onBack} color1={isMayor?"#D946EF":"#0EA5E9"} color2={isMayor?C.sec:C.acc}/>
+          <div style={{padding:"14px 12px 120px"}}>
+            <div style={{background:C.wht+"cc",borderRadius:16,padding:"10px 14px",marginBottom:14,border:`2px dashed ${isMayor?"#D946EF44":"#0EA5E944"}`,textAlign:"center"}}>
+              <p style={{fontFamily:FONT,fontSize:15,fontWeight:600,color:C.dark}}>Toca el número {isMayor?"más grande 👑":"más pequeño 🔍"} de cada fila</p>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {data.map((row,ri)=>{
+                const correct=getCorrect(row);
+                const ok=checked&&answers[ri]===correct;
+                const bad=checked&&answers[ri]!==null&&answers[ri]!==correct;
+                return (
+                  <div key={ri} style={{background:C.wht,borderRadius:18,padding:"10px 8px",display:"flex",gap:8,justifyContent:"center",alignItems:"center",boxShadow:"0 3px 12px rgba(0,0,0,0.05)",border:`2px solid ${ok?C.grn:bad?C.red+"66":"transparent"}`,flexWrap:"wrap"}}>
+                    {row.map((num,ci)=>{
+                      const sel=answers[ri]===num;
+                      const isCorrectNum=checked&&num===correct;
+                      return <button key={ci} onClick={()=>{const n=[...answers];n[ri]=num;setAnswers(n);if(checked)setChecked(false);}} style={{minWidth:68,height:58,borderRadius:14,border:`3px solid ${isCorrectNum&&checked?C.grn:sel?isMayor?"#D946EF":"#0EA5E9":C.pri+"22"}`,background:isCorrectNum&&checked?C.grn+"22":sel?(isMayor?"#D946EF18":"#0EA5E918"):C.lit,fontFamily:FONT,fontSize:24,fontWeight:700,color:isCorrectNum&&checked?C.grn:sel?(isMayor?"#D946EF":"#0EA5E9"):C.dark,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s",padding:"0 10px"}}>{num}</button>;
+                    })}
+                    {ok&&<span style={{fontSize:16}}>⭐</span>}
+                  </div>
+                );
+              })}
+            </div>
+            {checked&&<ScoreBadge score={score} total={data.length}/>}
+          </div>
+          <BottomBar onCheck={handleCheck} onReset={()=>{setChecked(false);setAnswers(data.map(()=>null));}}/>
+        </div>
+      );
+    }
+
+    /* ═══ MAIN MENU ═══ */
+    const ACTIVITIES = [
+      {id:"decomp",emoji:"✂️",title:"Descomponer y Componer",desc:"Suma y separa números del 1 al 10",color1:C.pri,color2:C.sec},
+      {id:"compare",emoji:"⚖️",title:"Comparar Cantidades",desc:"Mayor, menor o igual hasta 100",color1:"#3B82F6",color2:C.acc},
+      {id:"decenas",emoji:"❤️",title:"Encerramos Decenas",desc:"Selecciona grupos de 10 corazones",color1:"#E11D48",color2:C.ora},
+      {id:"bloques",emoji:"🧱",title:"Número Representado",desc:"Cuenta barras y cubitos",color1:"#8B5CF6",color2:"#EC4899"},
+      {id:"mayor",emoji:"👑",title:"¿Cuál es el Mayor?",desc:"Encuentra el número más grande",color1:"#D946EF",color2:C.sec},
+      {id:"menor",emoji:"🔍",title:"¿Cuál es el Menor?",desc:"Encuentra el número más pequeño",color1:"#0EA5E9",color2:C.acc},
+    ];
+
+    function App(){
+      const [screen,setScreen]=useState("menu");
+
+      if(screen==="decomp") return <Descomposicion onBack={()=>setScreen("menu")}/>;
+      if(screen==="compare") return <Comparacion onBack={()=>setScreen("menu")}/>;
+      if(screen==="decenas") return <Decenas onBack={()=>setScreen("menu")}/>;
+      if(screen==="bloques") return <NumeroRepresentado onBack={()=>setScreen("menu")}/>;
+      if(screen==="mayor") return <MayorMenor onBack={()=>setScreen("menu")} mode="mayor"/>;
+      if(screen==="menor") return <MayorMenor onBack={()=>setScreen("menu")} mode="menor"/>;
+
+      return (
+        <div style={{minHeight:"100vh",background:`linear-gradient(170deg,${C.bg} 0%,#F0E6FF 40%,#E6F7F4 70%,${C.lit} 100%)`,fontFamily:FONT}}>
+          <div style={{background:`linear-gradient(135deg,${C.pri},#D946EF,${C.sec})`,padding:"32px 20px 28px",borderRadius:"0 0 36px 36px",boxShadow:`0 10px 40px ${C.pri}33`,textAlign:"center"}}>
+            <div style={{fontSize:48,marginBottom:4}}>🔢</div>
+            <h1 style={{fontSize:28,fontWeight:700,color:C.wht,margin:0,textShadow:"0 2px 10px rgba(0,0,0,0.15)"}}>Mates Primer Grado</h1>
+            <p style={{color:"#ffffffcc",fontSize:14,marginTop:4,fontWeight:500}}>Material de apoyo extra para practicar en casa</p>
+          </div>
+          <div style={{padding:"20px 14px 40px",display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:14}}>
+            {ACTIVITIES.map((act,i)=>
+              <button key={act.id} onClick={()=>setScreen(act.id)} style={{background:C.wht,borderRadius:24,padding:"20px 14px",border:`2px solid ${act.color1}15`,cursor:"pointer",boxShadow:"0 6px 24px rgba(0,0,0,0.06)",display:"flex",flexDirection:"column",alignItems:"center",gap:8,textAlign:"center",animation:`slideUp 0.4s ${i*0.08}s ease both`,transition:"transform 0.2s, box-shadow 0.2s"}}>
+                <div style={{width:64,height:64,borderRadius:20,background:`linear-gradient(135deg,${act.color1},${act.color2})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:30,boxShadow:`0 6px 20px ${act.color1}33`}}>{act.emoji}</div>
+                <div style={{fontFamily:FONT,fontSize:15,fontWeight:700,color:C.dark,lineHeight:1.2}}>{act.title}</div>
+                <div style={{fontFamily:FONT,fontSize:12,fontWeight:500,color:C.dark+"88",lineHeight:1.3}}>{act.desc}</div>
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+  <script>
+    // Register Service Worker for PWA / offline
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('SW registered:', reg.scope))
+          .catch(err => console.log('SW registration failed:', err));
+      });
+    }
+  </script>
+</body>
+</html>
