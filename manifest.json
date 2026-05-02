@@ -1,24 +1,14 @@
 {
-  "name": "Magic Numbers",
-  "short_name": "Magic Numbers",
-  "description": "Práctica interactiva de matemáticas para primer grado",
+  "name": "Magic Math",
+  "short_name": "Magic Math",
+  "description": "Práctica interactiva de matemáticas para primer grado - Quiz #2",
   "start_url": "./index.html",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#FFFBF0",
   "theme_color": "#6C3CE1",
   "icons": [
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+    {"src": "icon-192.png","sizes": "192x192","type": "image/png","purpose": "any maskable"},
+    {"src": "icon-512.png","sizes": "512x512","type": "image/png","purpose": "any maskable"}
   ]
 }
