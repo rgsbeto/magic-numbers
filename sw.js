@@ -1,4 +1,4 @@
-const CACHE_NAME = 'magic-math-v3';
+const CACHE_NAME = 'magic-math-v4';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png',
   'https://unpkg.com/react@18/umd/react.production.min.js',
   'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',

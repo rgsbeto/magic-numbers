@@ -347,55 +347,81 @@ function Operaciones({onBack,mode}){
   const [checked,setChecked]=useState(false);
   const [confetti,setConfetti]=useState(false);
   const [celeb,setCeleb]=useState(false);
-  const [pad,setPad]=useState(null); // {idx, field}
-  const getC=(i)=>mode==="suma"?data[i][0]+data[i][1]:data[i][0]-data[i][1];
+  const [pad,setPad]=useState(null);
+  const getR=(i)=>mode==="suma"?data[i][0]+data[i][1]:data[i][0]-data[i][1];
   const getDigits=(n)=>({c:Math.floor(n/100),d:Math.floor((n%100)/10),u:n%10});
   const check=()=>{
     setChecked(true);
-    const ok=data.every((_,i)=>{const t=getDigits(getC(i)),a=ans[i];
+    const ok=data.every((_,i)=>{const t=getDigits(getR(i)),a=ans[i];
       const needsC=t.c>0;
       return a.d===t.d&&a.u===t.u&&(needsC?a.c===t.c:true);
     });
     if(ok){setConfetti(true);setCeleb(true);setTimeout(()=>setConfetti(false),2500);}
   };
-  const sc=data.filter((_,i)=>{const t=getDigits(getC(i)),a=ans[i];const needsC=t.c>0;return a.d===t.d&&a.u===t.u&&(needsC?a.c===t.c:true);}).length;
+  const sc=data.filter((_,i)=>{const t=getDigits(getR(i)),a=ans[i];const needsC=t.c>0;return a.d===t.d&&a.u===t.u&&(needsC?a.c===t.c:true);}).length;
   const isSuma=mode==="suma";
+  const symColor=isSuma?C.acc:"#E11D48";
+  const sym=isSuma?"+":"−";
+
+  // Digit extraction helpers
+  const dTens=(n)=>n>=10?Math.floor(n/10):null;
+  const dOnes=(n)=>n%10;
+
+  // Cell style for operand digits
+  const cellS={width:30,height:32,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:F,fontSize:20,fontWeight:700,color:C.dark};
+  const emptyS={...cellS,color:"transparent"};
 
   return <div style={{minHeight:"100vh",background:`linear-gradient(170deg,${C.bg},${isSuma?C.mint:C.pink},${isSuma?C.sky:C.lav})`}}>
     <Confetti show={confetti}/><Celeb show={celeb} onClose={()=>setCeleb(false)}/>
     <Hdr title={isSuma?"➕ Repasemos las Sumas":"➖ Repasemos las Restas"} subtitle={isSuma?"Sumas sin llevar":"Restas sin pedir prestado"} onBack={onBack} c1={isSuma?"#059669":"#E11D48"} c2={isSuma?C.acc:C.ora}/>
     <div style={{padding:"14px 10px 120px"}}>
       <Tip text={isSuma?"Escribe el resultado cifra por cifra: D (decenas) y U (unidades) ➕":"Escribe el resultado cifra por cifra: D (decenas) y U (unidades) ➖"} color={isSuma?"#05966944":"#E11D4844"}/>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(110px,1fr))",gap:10}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(115px,1fr))",gap:10}}>
         {data.map(([a,b],i)=>{
-          const correct=getC(i); const td=getDigits(correct); const ar=ans[i];
+          const correct=getR(i); const td=getDigits(correct); const ar=ans[i];
           const needsC=td.c>0;
           const okU=checked&&ar.u===td.u; const badU=checked&&ar.u!==null&&ar.u!==td.u;
           const okD=checked&&ar.d===td.d; const badD=checked&&ar.d!==null&&ar.d!==td.d;
           const okC=checked&&(!needsC||ar.c===td.c); const badC=checked&&needsC&&ar.c!==null&&ar.c!==td.c;
           const allOk=okU&&okD&&okC&&checked; const anyBad=(badU||badD||badC)&&checked;
-          return <div key={i} style={{background:C.wht,borderRadius:18,padding:"10px 6px",display:"flex",flexDirection:"column",alignItems:"center",gap:2,boxShadow:"0 3px 12px rgba(0,0,0,0.05)",border:`2px solid ${allOk?C.grn:anyBad?C.red+"66":"transparent"}`}}>
-            <span style={{fontFamily:F,fontSize:20,fontWeight:700,color:C.dark}}>{a}</span>
-            <div style={{display:"flex",alignItems:"center",gap:3}}>
-              <span style={{fontFamily:F,fontSize:16,fontWeight:700,color:isSuma?C.acc:"#E11D48"}}>{isSuma?"+":"−"}</span>
-              <span style={{fontFamily:F,fontSize:20,fontWeight:700,color:C.dark}}>{b}</span>
+
+          const aT=dTens(a), aO=dOnes(a);
+          const bT=dTens(b), bO=dOnes(b);
+
+          return <div key={i} style={{background:C.wht,borderRadius:18,padding:"10px 8px",display:"flex",flexDirection:"column",alignItems:"center",gap:0,boxShadow:"0 3px 12px rgba(0,0,0,0.05)",border:`2px solid ${allOk?C.grn:anyBad?C.red+"66":"transparent"}`}}>
+            {/* Row: first operand — columns: [sym placeholder] [tens] [units] */}
+            <div style={{display:"grid",gridTemplateColumns:"24px 30px 30px",justifyContent:"center",gap:2}}>
+              {/* symbol column empty for first row */}
+              <div style={emptyS}/>
+              {/* tens */}
+              <div style={aT!==null?cellS:emptyS}>{aT!==null?aT:""}</div>
+              {/* units */}
+              <div style={cellS}>{aO}</div>
             </div>
-            <div style={{height:2,width:"90%",background:C.dark+"33",borderRadius:1,margin:"3px 0"}}/>
-            <div style={{display:"flex",gap:4,alignItems:"flex-end"}}>
+            {/* Row: symbol + second operand */}
+            <div style={{display:"grid",gridTemplateColumns:"24px 30px 30px",justifyContent:"center",gap:2}}>
+              <div style={{...cellS,width:24,fontSize:16,fontWeight:700,color:symColor}}>{sym}</div>
+              <div style={bT!==null?cellS:emptyS}>{bT!==null?bT:""}</div>
+              <div style={cellS}>{bO}</div>
+            </div>
+            {/* Horizontal line */}
+            <div style={{height:2,width:86,background:C.dark+"44",borderRadius:1,margin:"3px 0"}}/>
+            {/* Result: C / D / U input boxes */}
+            <div style={{display:"flex",gap:4,alignItems:"flex-end",marginTop:2}}>
               {needsC&&<div style={{textAlign:"center"}}>
                 <div style={{fontFamily:F,fontSize:9,fontWeight:700,color:C.ora}}>C</div>
-                <InBox value={ar.c} onClick={()=>setPad({idx:i,field:"c"})} correct={checked&&okC&&needsC} wrong={badC} size={34}/>
+                <InBox value={ar.c} onClick={()=>setPad({idx:i,field:"c"})} correct={checked&&okC&&needsC} wrong={badC} size={30}/>
               </div>}
               <div style={{textAlign:"center"}}>
                 <div style={{fontFamily:F,fontSize:9,fontWeight:700,color:"#EC4899"}}>D</div>
-                <InBox value={ar.d} onClick={()=>setPad({idx:i,field:"d"})} correct={okD} wrong={badD} size={34}/>
+                <InBox value={ar.d} onClick={()=>setPad({idx:i,field:"d"})} correct={okD} wrong={badD} size={30}/>
               </div>
               <div style={{textAlign:"center"}}>
                 <div style={{fontFamily:F,fontSize:9,fontWeight:700,color:"#0EA5E9"}}>U</div>
-                <InBox value={ar.u} onClick={()=>setPad({idx:i,field:"u"})} correct={okU} wrong={badU} size={34}/>
+                <InBox value={ar.u} onClick={()=>setPad({idx:i,field:"u"})} correct={okU} wrong={badU} size={30}/>
               </div>
             </div>
-            {allOk&&<span style={{fontSize:12}}>⭐</span>}
+            {allOk&&<span style={{fontSize:12,marginTop:2}}>⭐</span>}
           </div>;
         })}
       </div>
